@@ -1,0 +1,187 @@
+openapi: 3.0.3
+info:
+  title: File Management System (FMS) API
+  version: 1.0.0
+  description: |
+    Laravel 11 + Sanctum (Bearer token). Semua endpoint `/api/*` mengembalikan JSON.
+    Login dulu via POST /api/login untuk mendapatkan `token`, lalu kirim
+    `Authorization: Bearer <token>`.
+servers:
+  - url: http://localhost:8000/api
+    description: Local (php artisan serve / docker)
+paths:
+  /login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, example: admin@example.com }
+                password: { type: string, example: password }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user:
+                    $ref: '#/components/schemas/User'
+  /me:
+    get:
+      summary: Profil user saat ini
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: OK } }
+  /logout:
+    post:
+      summary: Logout (revoke token)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: OK } }
+  /dashboard:
+    get:
+      summary: Statistik + 10 file terbaru
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: OK } }
+  /folders:
+    get:
+      summary: List/paginasi folder (+ filter parent_id, tree=1)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: parent_id, in: query, schema: { type: integer, nullable: true } }
+        - { name: per_page, in: query, schema: { type: integer, default: 15 } }
+      responses: { '200': { description: OK } }
+    post:
+      summary: Buat folder (admin)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                parent_id: { type: integer, nullable: true }
+      responses: { '201': { description: Created }, '403': { description: Forbidden } }
+  /folders/{id}:
+    get:
+      summary: Detail folder + children + files + breadcrumbs
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: OK } }
+    put:
+      summary: Rename folder (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: OK } }
+    delete:
+      summary: Hapus folder rekursif (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: OK } }
+  /folders-tree:
+    get:
+      summary: Full folder tree
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: OK } }
+  /files:
+    get:
+      summary: List file (search q, filter department_id, folder_id)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: cari nama file / title }
+        - { name: department_id, in: query, schema: { type: integer } }
+        - { name: folder_id, in: query, schema: { type: integer } }
+        - { name: per_page, in: query, schema: { type: integer, default: 15 } }
+      responses: { '200': { description: OK } }
+    post:
+      summary: Upload file (admin, multipart)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [folder_id, department_id, title, file]
+              properties:
+                folder_id: { type: integer }
+                department_id: { type: integer }
+                title: { type: string }
+                file: { type: string, format: binary }
+      responses: { '201': { description: Created } }
+  /files/{id}:
+    get:
+      summary: Detail file (folder, nama file, title, department, uploaded by, upload date)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: OK } }
+    put:
+      summary: Edit metadata / ganti file (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: OK } }
+    delete:
+      summary: Hapus file soft-delete (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: OK } }
+  /files/{id}/download:
+    get:
+      summary: Download file (admin + viewer)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: binary } }
+  /files/{id}/preview:
+    get:
+      summary: Preview inline PDF/image
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: binary } }
+  /departments:
+    get:
+      summary: List department
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: OK } }
+    post:
+      summary: Buat department (admin)
+      security: [{ bearerAuth: [] }]
+      responses: { '201': { description: Created } }
+  /departments/{id}:
+    get:
+      summary: Detail department
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: OK } }
+    put:
+      summary: Update department (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: OK } }
+    delete:
+      summary: Hapus department (admin)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: OK } }
+  /activity-logs:
+    get:
+      summary: Activity log (admin)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: OK } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [administrator, viewer] }
