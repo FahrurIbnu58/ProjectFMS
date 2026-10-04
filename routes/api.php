@@ -6,9 +6,15 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\FolderController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
+
+
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
@@ -47,5 +53,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/files/{file}', [FileController::class, 'destroy']);
 
         Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+
+        Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']);
+        Route::match(['put', 'patch'], '/users/{user}', [UserController::class, 'update']);
+        Route::delete('/users/{user}', [UserController::class, 'destroy']);
     });
 });

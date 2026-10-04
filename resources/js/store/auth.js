@@ -2,48 +2,49 @@ import { reactive, computed } from 'vue';
 import axios from 'axios';
 
 export const auth = reactive({
-    user: null,
-    token: localStorage.getItem('fms_token') || null,
+    token: localStorage.getItem('fms_token') || '',
+    user: JSON.parse(localStorage.getItem('fms_user') || 'null'),
 });
+
+export const isAuthenticated = computed(() => !!auth.token);
 
 export const isAdmin = computed(() => {
-    const r = auth.user?.role ?? auth.user?.role_name ?? '';
-    return r === 'administrator' || r === 'admin';
+    if (!auth.user) return false;
+    const r = String(auth.user.role || '').toLowerCase();
+    return r.includes('admin') || r.includes('administrator');
 });
 
-export const roleName = computed(() => auth.user?.role ?? auth.user?.role_name ?? '-');
-
 export async function login(email, password) {
-    const { data } = await axios.post('/login', { email, password });
-    // Defensive: backend may return {token,user} or {data:{token,user}} or {access_token}
-    const token = data?.token ?? data?.data?.token ?? data?.access_token ?? data?.data?.access_token ?? null;
-    const user = data?.user ?? data?.data?.user ?? null;
-    if (!token) throw new Error(data?.message || 'Token tidak diterima dari server.');
+    // Hapus sisa-sisa token/header lama sebelum mencoba login baru
+    delete axios.defaults.headers.common['Authorization'];
+    localStorage.removeItem('fms_token');
+    localStorage.removeItem('fms_user');
+
+    const response = await axios.post('/login', { email, password });
+    const { token, user } = response.data;
+
     auth.token = token;
     auth.user = user;
-    localStorage.setItem('fms_token', token);
-    if (user) localStorage.setItem('fms_user', JSON.stringify(user));
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    // If user missing, try /me
-    if (!user) {
-        try { await fetchMe(); } catch { /* ignore */ }
-    }
-    return { token, user: auth.user };
-}
 
-export async function fetchMe() {
-    const { data } = await axios.get('/me');
-    const user = data?.user ?? data?.data ?? data;
-    auth.user = user;
+    localStorage.setItem('fms_token', token);
     localStorage.setItem('fms_user', JSON.stringify(user));
-    return user;
+
+    // Set Authorization Header untuk request berikutnya
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+    return response;
 }
 
 export async function logout() {
-    try { await axios.post('/logout'); } catch { /* ignore */ }
-    auth.user = null;
-    auth.token = null;
-    localStorage.removeItem('fms_token');
-    localStorage.removeItem('fms_user');
-    delete axios.defaults.headers.common['Authorization'];
+    try {
+        await axios.post('/logout');
+    } catch (e) {
+        // Abaikan error saat logout
+    } finally {
+        auth.token = '';
+        auth.user = null;
+        localStorage.removeItem('fms_token');
+        localStorage.removeItem('fms_user');
+        delete axios.defaults.headers.common['Authorization'];
+    }
 }

@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { auth, isAdmin } from '../store/auth.js';
+import UsersView from '../views/UsersView.vue';
+import RegisterView from '../views/RegisterView.vue';
+import ForgotPasswordView from '../views/ForgotPasswordView.vue';
 
 const LoginView = () => import('../views/LoginView.vue');
 const DashboardView = () => import('../views/DashboardView.vue');
@@ -10,7 +13,11 @@ const ActivityLogView = () => import('../views/ActivityLogView.vue');
 
 const routes = [
     { path: '/login', name: 'login', component: LoginView, meta: { guest: true } },
+    { path: '/register', name: 'register', component: RegisterView, meta: { guest: true } },
+    { path: '/forgot-password', name: 'forgot-password', component: ForgotPasswordView, meta: { guest: true } },
+
     { path: '/', name: 'dashboard', component: DashboardView, meta: { auth: true } },
+    { path: '/users', name: 'users', component: UsersView, meta: { auth: true, admin: true } },
     { path: '/folders/:id?', name: 'folders', component: FolderBrowserView, meta: { auth: true } },
     { path: '/files/:id', name: 'file-detail', component: FileDetailView, meta: { auth: true } },
     { path: '/departments', name: 'departments', component: DepartmentsView, meta: { auth: true, admin: true } },
@@ -28,8 +35,6 @@ router.beforeEach((to) => {
     if (to.meta.auth && !token) return { path: '/login', query: { redirect: to.fullPath } };
     if (to.meta.guest && token) return { path: '/' };
     if (to.meta.admin && !isAdmin.value) {
-        // Non-admin trying to access admin page -> dashboard
-        // Allow if user not yet loaded (role unknown): let it pass, view will handle
         if (auth.user) return { path: '/' };
     }
     return true;

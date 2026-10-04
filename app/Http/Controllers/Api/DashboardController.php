@@ -11,19 +11,12 @@ class DashboardController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(protected DashboardService $service)
-    {
-    }
+    public function __construct(protected DashboardService $service) {}
 
     public function index()
     {
         $stats = $this->service->stats();
 
-        return $this->success([
-            'total_folders' => $stats['total_folders'],
-            'total_files' => $stats['total_files'],
-            'total_departments' => $stats['total_departments'],
-            'latest_files' => FileResource::collection($stats['latest_files']),
-        ], 'Dashboard stats.');
+        return $this->success($stats, 'Dashboard stats fetched successfully.');
     }
 }

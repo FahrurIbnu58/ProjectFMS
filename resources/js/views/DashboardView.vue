@@ -1,57 +1,121 @@
 <template>
-  <div>
-    <h2 class="text-xl font-bold mb-4">Dasbor</h2>
-    <div v-if="error" class="card !border-red-300 text-sm text-red-600 mb-4">{{ error }}</div>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <StatCard label="Total Folder" :value="totals.folders" />
-      <StatCard label="Total Berkas" :value="totals.files" />
-      <StatCard label="Departemen" :value="totals.departments" />
-      <StatCard label="Total Unduhan" :value="totals.downloads ?? '-'" />
-    </div>
-    <div class="card mt-4 !p-0 overflow-hidden">
-      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700 font-semibold flex justify-between items-center">
-        <span>Berkas Terbaru</span>
-        <router-link to="/folders" class="text-sm text-blue-600 dark:text-blue-400">Lihat semua →</router-link>
+  <div class="space-y-8">
+    <!-- JIKA ROLE BUKAN ADMINISTRATOR -->
+    <div v-if="!isAdmin" class="space-y-6">
+      <!-- Greeting Banner Dynamic -->
+      <div
+        class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-blue-500/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <span class="bg-white/20 text-xs px-3 py-1 rounded-full backdrop-blur-md font-medium">
+            Departemen {{ userDepartment }}
+          </span>
+          <h1 class="text-2xl md:text-3xl font-bold mt-2">
+            Selamat datang kembali, {{ userName }}! 👋
+          </h1>
+          <p class="text-blue-100 text-sm mt-1">
+            Kelola dan temukan berkas departemen Anda dengan mudah di sini.
+          </p>
+        </div>
+        <router-link to="/folders"
+          class="bg-white text-blue-600 px-5 py-2.5 rounded-xl font-semibold shadow-lg hover:bg-blue-50 transition text-sm">
+          + Temukan Berkas
+        </router-link>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead><tr class="border-b border-slate-200 dark:border-slate-700"><th class="table-th">Judul</th><th class="table-th">Folder</th><th class="table-th">Tanggal</th></tr></thead>
-          <tbody>
-            <tr v-if="loading"><td colspan="3" class="table-td text-center">Memuat…</td></tr>
-            <tr v-else-if="!latest.length"><td colspan="3" class="table-td text-center text-slate-500">Belum ada berkas.</td></tr>
-            <tr v-for="f in latest" :key="f?.id" class="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/40 cursor-pointer" @click="$router.push(`/files/${f.id}`)">
-              <td class="table-td font-medium">{{ f?.title ?? f?.nama_file ?? '-' }}</td>
-              <td class="table-td">{{ f?.folder?.name ?? f?.folder?.nama ?? '-' }}</td>
-              <td class="table-td">{{ fmtDate(f?.created_at) }}</td>
-            </tr>
-          </tbody>
-        </table>
+
+      <!-- Quick Stats User Dynamic -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div
+          class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
+          <p class="text-xs text-slate-400 font-semibold uppercase">Berkas Saya</p>
+          <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">{{ userStats.my_files }}</p>
+        </div>
+
+        <div
+          class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
+          <p class="text-xs text-slate-400 font-semibold uppercase">Total Diunduh</p>
+          <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">{{ userStats.total_downloads }} x</p>
+        </div>
+
+        <div
+          class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
+          <p class="text-xs text-slate-400 font-semibold uppercase">Penyimpanan Terpakai</p>
+          <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">{{ userStats.storage_used }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- JIKA ROLE ADALAH ADMINISTRATOR -->
+    <div v-else class="space-y-6">
+      <h1 class="text-2xl font-bold text-slate-800 dark:text-white">Dasbor Ringkasan Sistem</h1>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+          <p class="text-xs text-slate-400 font-semibold uppercase">Total Folder</p>
+          <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">{{ adminStats.total_folders }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+          <p class="text-xs text-slate-400 font-semibold uppercase">Total Berkas</p>
+          <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">{{ adminStats.total_files }}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+          <p class="text-xs text-slate-400 font-semibold uppercase">Departemen</p>
+          <p class="text-2xl font-bold text-slate-800 dark:text-white mt-1">{{ adminStats.total_departments }}</p>
+        </div>
       </div>
     </div>
   </div>
 </template>
+
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
-import StatCard from '../components/StatCard.vue';
-const totals = ref({ folders: '-', files: '-', departments: '-', downloads: '-' });
-const latest = ref([]);
-const loading = ref(true);
-const error = ref('');
-function fmtDate(s) { if (!s) return '-'; try { return new Date(s).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } }
-onMounted(async () => {
+import { auth, isAdmin } from '../store/auth.js';
+
+const userStats = ref({
+  my_files: 0,
+  total_downloads: 0,
+  storage_used: '0 KB'
+});
+
+const adminStats = ref({
+  total_folders: 0,
+  total_files: 0,
+  total_departments: 0
+});
+
+// Ambil nama user terautentikasi
+const userName = computed(() => auth.user?.name || 'Pengguna');
+
+// Ambil nama departemen user
+const userDepartment = computed(() => {
+  const dept = auth.user?.department;
+  if (typeof dept === 'object' && dept !== null) return dept.name || 'Umum';
+  return dept || auth.user?.department_name || 'Umum';
+});
+
+async function fetchDashboard() {
   try {
     const { data } = await axios.get('/dashboard');
-    const d = data?.data ?? data ?? {};
-    const t = d?.totals ?? d ?? {};
-    totals.value = {
-      folders: t?.total_folders ?? t?.folders ?? t?.folder_count ?? 0,
-      files: t?.total_files ?? t?.files ?? t?.file_count ?? 0,
-      departments: t?.total_departments ?? t?.departments ?? t?.department_count ?? 0,
-      downloads: t?.total_downloads ?? t?.downloads ?? '-',
-    };
-    latest.value = d?.latest_files ?? d?.latest ?? d?.recent_files ?? [];
-  } catch (e) { error.value = e?.response?.data?.message ?? 'Gagal memuat dasbor.'; }
-  finally { loading.value = false; }
+    const res = data.data || data;
+
+    if (isAdmin.value) {
+      adminStats.value = {
+        total_folders: res.total_folders || 0,
+        total_files: res.total_files || 0,
+        total_departments: res.total_departments || 0
+      };
+    } else {
+      userStats.value = {
+        my_files: res.my_files || 0,
+        total_downloads: res.total_downloads || 0,
+        storage_used: res.storage_used || '0 KB'
+      };
+    }
+  } catch (err) {
+    console.error('Gagal mengambil data dasbor:', err);
+  }
+}
+
+onMounted(() => {
+  fetchDashboard();
 });
 </script>

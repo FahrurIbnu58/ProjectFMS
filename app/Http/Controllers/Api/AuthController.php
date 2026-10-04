@@ -3,42 +3,89 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\LoginRequest;
-use App\Http\Resources\UserResource;
-use App\Services\AuthService;
-use App\Traits\ApiResponse;
+use App\Models\User;
+use App\Enums\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    use ApiResponse;
-
-    public function __construct(protected AuthService $auth)
+    public function login(Request $request)
     {
-    }
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
 
-    public function login(LoginRequest $request)
-    {
-        [$user, $token] = $this->auth->login($request->validated()['email'], $request->validated()['password']);
+        if (!Auth::attempt($credentials)) {
+            return response()->json([
+                'message' => 'Email atau password yang Anda masukkan salah.'
+            ], 401);
+        }
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Hapus token lama user ini agar bersih
+        $user->tokens()->delete();
+
+        // Buat token Sanctum baru
+        $token = $user->createToken('fms_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Login successful.',
-            'data' => [
-                'user' => new UserResource($user),
-                'token' => $token,
-            ],
-        ]);
+            'message' => 'Login berhasil.',
+            'token' => $token,
+            'user' => $user
+        ], 200);
     }
 
-    public function me(Request $request)
+    public function register(Request $request)
     {
-        return $this->success(new UserResource($request->user()), 'Authenticated user.');
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role' => 'viewer',
+        ]);
+
+        return response()->json([
+            'message' => 'Registrasi berhasil. Silakan login.',
+            'user' => $user
+        ], 201);
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'new_password' => 'required|string|min:6',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Email tidak terdaftar.'], 404);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password)
+        ]);
+
+        return response()->json(['message' => 'Password berhasil diperbarui. Silakan login.']);
     }
 
     public function logout(Request $request)
     {
-        $this->auth->logout($request->user());
-
-        return $this->success(null, 'Logged out.');
+        if ($request->user()) {
+            $request->user()->currentAccessToken()->delete();
+        }
+        return response()->json(['message' => 'Berhasil keluar.']);
     }
 }
