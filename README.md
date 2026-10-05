@@ -1,6 +1,6 @@
 # File Management System (FMS)
 
-Aplikasi pengelolaan dokumen perusahaan: **Laravel 11 (backend, REST API + Sanctum)** + **Vue.js 3 (frontend SPA)** + **Tailwind CSS** + **PostgreSQL**. Mendukung folder hierarkis tanpa batas level, manajemen file, department sebagai metadata, RBAC (Administrator / Viewer), dashboard, search & filter, breadcrumb, drag & drop upload, preview PDF/gambar, activity log, soft delete, dark mode, responsive, service/repository pattern, pagination, dan testing.
+Aplikasi pengelolaan dokumen perusahaan: Mendukung folder hierarkis tanpa batas level, manajemen file, department sebagai metadata, RBAC (Administrator / Viewer), dashboard, search & filter, breadcrumb, drag & drop upload, preview PDF/gambar, activity log, soft delete, dark mode, responsive, CRUD users (dari laman admin), pagination, dan testing.
 
 ## Fitur
 
@@ -12,7 +12,6 @@ Aplikasi pengelolaan dokumen perusahaan: **Laravel 11 (backend, REST API + Sanct
 | File detail | Folder, nama file, title, department, uploaded by, upload date |
 | Dashboard | Total folder, total file, total department, 10 file terbaru |
 | Department | CRUD (admin), dipakai sebagai metadata file |
-| Bonus | Search & filter, breadcrumb, drag & drop upload, preview PDF/image, activity log, soft delete, feature test, Docker, API docs (OpenAPI + Postman), responsive, dark mode, service/repository |
 
 ## Tech stack
 
@@ -22,20 +21,6 @@ Aplikasi pengelolaan dokumen perusahaan: **Laravel 11 (backend, REST API + Sanct
 - PostgreSQL 16 (produksi/Docker), SQLite (dev lokal bila tanpa Postgres)
 - Storage: Laravel `public` disk (`storage/app/public/documents`)
 
-## Struktur repo (ringkas)
-
-```
-app/{Enums,Models,Policies,Repositories,Services,Traits,Http/{Controllers/Api,Middleware,Requests,Resources}}
-bootstrap/app.php            # registrasi api routes + alias middleware 'role'
-routes/{api.php,web.php}     # api + SPA fallback
-database/{migrations,seeders,factories}
-resources/{views/app.blade.php, js/{app.js,router,store,components,views}, css/app.css}
-tests/Feature                # Auth, Folder, File, Department, Dashboard
-docs/{openapi.yaml,postman_collection.json}
-Dockerfile, docker-compose.yml
-```
-
-Relasi DB: `users 1—n folders/files/activity_logs`; `folders self-ref parent/children, 1—n files`; `departments 1—n files`; `files n—1 folder/department/uploader`.
 
 ## Requirement
 
@@ -58,7 +43,7 @@ PostgreSQL lokal (tanpa Docker):
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_PORT=5432
-DB_DATABASE=fms
+DB_DATABASE=postgres
 DB_USERNAME=postgres
 DB_PASSWORD=secret
 FILESYSTEM_DISK=public
@@ -76,7 +61,7 @@ DB_DATABASE=C:\path\to\database\database.sqlite
 ```bash
 composer install
 npm install
-npm run build            # atau npm run dev saat develop
+npm run build            # atau npm run dev saat develop, agar saling terintegrasi hingga web bisa dijalankan.
 php artisan storage:link
 php artisan migrate --seed
 php artisan serve        # http://localhost:8000
@@ -93,48 +78,10 @@ php artisan db:seed
 php artisan migrate:fresh --seed
 ```
 
-Seeder membuat:
+Akun login :
 
 | Akun | Email | Password | Role |
-|---|---|---|---|
-| Administrator | admin@example.com | password | administrator |
-| Viewer | viewer@example.com | password | viewer |
+| Administrator | admin@example.com | password | administrator | #login sebagai admin
+| Viewer | viewer@example.com | password | viewer | #login sebagai user atau viewer
 
-Plus department (HR, Finance, IT, Legal, Marketing, Operations), folder hierarkis contoh, dan ±12 file contoh.
 
-## Menjalankan test
-
-```bash
-php artisan test
-# per modul:
-php artisan test --filter=FolderTest
-```
-
-## Docker
-
-```bash
-docker compose up --build -d
-docker compose run --rm app php artisan migrate --seed --force
-# buka http://localhost:8000
-```
-
-Service `db` = Postgres 16 (`fms`/`fms`/`secret`), `app` = PHP 8.2 + Apache.
-
-## API ringkas
-
-Auth: `POST /api/login` → `{token, user}`. Sertakan `Authorization: Bearer <token>` untuk sisanya.
-
-- `GET /api/me`, `POST /api/logout`
-- `GET /api/dashboard`
-- `GET/POST /api/folders`, `GET/PUT/DELETE /api/folders/{id}`, `GET /api/folders-tree`, `GET /api/folders/{id}/breadcrumbs`
-- `GET/POST /api/files?q=&department_id=&folder_id=`, `GET/PUT/DELETE /api/files/{id}`, `GET /api/files/{id}/download`, `GET /api/files/{id}/preview`
-- `GET/POST /api/departments`, `GET/PUT/DELETE /api/departments/{id}`
-- `GET /api/activity-logs` (admin)
-
-Dokumen lengkap: `docs/openapi.yaml` (Swagger) dan `docs/postman_collection.json`.
-
-Aturan akses: endpoint tulis (POST/PUT/DELETE folder/file/department) + activity log = `administrator` (middleware `role:administrator` + Policy, 403 bila viewer). Viewer boleh: lihat folder/file, detail, download, preview, search, filter, dashboard.
-
-## Git
-
-Gunakan commit kecil dan jelas, contoh: `feat: authentication`, `feat: folder management`, `feat: upload document`, `fix: validation upload`, `refactor: move business logic to service`.
