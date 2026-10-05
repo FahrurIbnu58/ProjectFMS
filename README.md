@@ -1,6 +1,6 @@
 # File Management System (FMS)
 
-Aplikasi pengelolaan dokumen perusahaan: Mendukung folder hierarkis tanpa batas level, manajemen file, department sebagai metadata, RBAC (Administrator / Viewer), dashboard, search & filter, breadcrumb, drag & drop upload, preview PDF/gambar, activity log, soft delete, dark mode, responsive, CRUD users (dari laman admin), pagination, dan testing.
+Aplikasi pengelolaan dokumen perusahaan: Mendukung folder hierarkis tanpa batas level, manajemen file, department sebagai metadata, Administrator / Viewer, dashboard, search & filter, drag & drop upload, preview PDF/gambar, activity log, soft delete, dark mode, responsive, CRUD users (dari laman admin), pagination, dan testing.
 
 ## Fitur
 
